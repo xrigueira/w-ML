@@ -52,7 +52,7 @@ class Model():
             flattened_X.append(window_data.values.flatten())
             
             # Store the label for each window
-            window_label = 1 if np.mean(window_label) >= 0.1 else 0
+            window_label = 1 if np.mean(window_label) >= 0.5 else 0
             y.append(window_label)
         
         # Convert the flattened data and labels list to a Numpy array
@@ -81,6 +81,7 @@ class Model():
         combined = np.column_stack((self.X, self.y))
         
         # Shuffle the combined array
+        np.random.seed(0)
         np.random.shuffle(combined)
 
         # Split the shuffled array back into data and labels
