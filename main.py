@@ -12,8 +12,56 @@ class Model():
         self.stride = stride
         self.search = search
         
+        self.smoothed_data = None
         self.X = None
         self.y = None
+    
+    def smooth_column(self, column_data, window_size, stride):
+        smoothed_values = []
+        for i in range(0, len(column_data), stride):
+            window_start = max(0, i - window_size // 2)
+            window_end = min(len(column_data), i + window_size // 2 + 1)
+            window = column_data[window_start:window_end]
+            smoothed_values.append(window.mean())
+        return smoothed_values
+    
+    @tictoc
+    def preprocessor(self):
+        """This function normalizes and smoothes the data.
+        ---------
+        Arguments:
+        self
+        
+        Returns:
+        smoothed_data (Pandas DataFrame): smoothed data."""
+        
+        
+        # Read the data
+        data = pd.read_csv(f'data/labeled_{self.station}_pro.csv', sep=',', encoding='utf-8')
+        
+        # Normalize the data
+        from sklearn.preprocessing import MinMaxScaler
+        scaler = MinMaxScaler()
+        data.iloc[:, 1:-2] = scaler.fit_transform(data.iloc[:, 1:-2])
+        
+        # Define the variables needed for smoothing
+        window_size = 4
+        stride = 1
+        smoothed_data = data.copy()
+        
+        # Smoothed the data using parallelization to speed it up
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor() as executor:
+            smoothed_columns = executor.map(self.smooth_column, 
+                                            [data[col] for col in data.columns[1:-2]],
+                                            [window_size] * (len(data.columns[1:-2])),
+                                            [stride] * (len(data.columns[1:-2])))
+            
+            for col, smoothed_values in zip(data.columns[1:-2], smoothed_columns):
+                smoothed_data[col] = smoothed_values
+        
+        self.smoothed_data = smoothed_data
+        # smoothed_data.to_csv(f'data/labeled_{self.station}_smo.csv', encoding='utf-8', sep=',', index=False)
     
     @tictoc
     def windower(self):
@@ -29,10 +77,10 @@ class Model():
         """
         
         # Read the data
-        data = pd.read_csv(f'data/labeled_{self.station}_pro.csv', sep=',', encoding='utf-8')
+        # data = pd.read_csv(f'data/labeled_{self.station}_pro.csv', sep=',', encoding='utf-8')
         
         # Calculate the maximum valid start index for a window
-        max_start_idx = len(data) - self.window_size
+        max_start_idx = len(self.smoothed_data) - self.window_size
         
         # List to store the flattened window rows and the target labels
         flattened_X = []
@@ -45,8 +93,8 @@ class Model():
             end_idx = i + self.window_size
             
             # Extract the window of rows
-            window_data = data.iloc[i:end_idx, 1:7]
-            window_label = data.iloc[i:end_idx, -1]
+            window_data = self.smoothed_data.iloc[i:end_idx, 1:7]
+            window_label = self.smoothed_data.iloc[i:end_idx, -1]
             
             # Convert the window rows to a 2D array and append to flattened_rows
             flattened_X.append(window_data.values.flatten())
@@ -163,7 +211,10 @@ class Model():
 if __name__ == '__main__':
     
     # Create an instance of class
-    model = Model(station=901, window_size=9, stride=4, search=False)
+    model = Model(station=901, window_size=8, stride=1, search=False)
+    
+    # Preprocess the data (normalizing and smoothing)
+    model.preprocessor()
     
     # Build the windows
     model.windower()
