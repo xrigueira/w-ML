@@ -16,6 +16,7 @@ class Model():
         self.X = None
         self.y = None
     
+    # Smooths a column of data using a moving average with specified window size and stride
     def smooth_column(self, column_data, window_size, stride):
         smoothed_values = []
         for i in range(0, len(column_data), stride):
@@ -34,7 +35,6 @@ class Model():
         
         Returns:
         smoothed_data (Pandas DataFrame): smoothed data."""
-        
         
         # Read the data
         data = pd.read_csv(f'data/labeled_{self.station}_pro.csv', sep=',', encoding='utf-8')
@@ -76,9 +76,6 @@ class Model():
         y (np.array): labels.
         """
         
-        # Read the data
-        # data = pd.read_csv(f'data/labeled_{self.station}_pro.csv', sep=',', encoding='utf-8')
-        
         # Calculate the maximum valid start index for a window
         max_start_idx = len(self.smoothed_data) - self.window_size
         
@@ -106,6 +103,20 @@ class Model():
         # Convert the flattened data and labels list to a Numpy array
         X = np.array(flattened_X)
         y = np.array(y)
+        
+        # Stablish a background:anomaly ratio of 5:1
+        # Find indices where y is 1 and 0
+        indices_anomalies = np.where(y == 1)[0]
+        indices_nonanomalies = np.where(y == 0)[0]
+        
+        # Randomly sample 5 times as many pairs from y=0 to balance the dataset
+        num_samples_nonanomalies = len(indices_anomalies) * 5
+        selected_indices_nonanomalies = np.random.choice(indices_nonanomalies, num_samples_nonanomalies, replace=False)
+        
+        # Combine the selected pais
+        selected_indices = np.concatenate((indices_anomalies, selected_indices_nonanomalies))
+        X = X[selected_indices]
+        y = y[selected_indices]
         
         # Store the results
         self.X = X
