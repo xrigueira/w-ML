@@ -18,6 +18,9 @@ if __name__ == '__main__':
             # Create an instance of class
             model = Model(station=901, window_size=window_size, stride=stride, search=False)
     
+            # Preprocess the data (normalizing and smoothing)
+            model.preprocessor()
+            
             # Build the windows
             model.windower()
     
@@ -27,6 +30,6 @@ if __name__ == '__main__':
             num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)    
             
             results.loc[len(results.index)] = [window_size, stride, num_anomalies, tn, fp, fn, tp]
-        
-# Save the results
-results.to_csv(f'results.csv', sep=',', encoding='utf-8', index=True)
+
+    # Save the results
+    results.to_csv(f'results.csv', sep=',', encoding='utf-8', index=True)
