@@ -6,8 +6,8 @@ from main import Model
 
 if __name__ == '__main__':
     
-    window_sizes = [4]
-    strides = [1, 2]
+    window_sizes = [144, 192, 288, 348]
+    strides = [1, 2, 4, 8, 16]
     
     results = pd.DataFrame(columns=['window_size', 'stride', 'anomalies', 'tn', 'fp', 'fn', 'tp'])
     
