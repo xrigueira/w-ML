@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-df = pd.read_csv('anomalies.csv', sep=';', encoding='utf-8')
+df = pd.read_csv('anomalies_901.csv', sep=';', encoding='utf-8')
 
 df['Start_date'] = pd.to_datetime(df['Start_date'], dayfirst=True)
 df['End_date'] = pd.to_datetime(df['End_date'], dayfirst=True)
