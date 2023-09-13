@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,6 +14,8 @@ class Model():
         self.search = search
         
         self.smoothed_data = None
+        self.X_pred = None
+        self.Y_pred = None
         self.X = None
         self.y = None
     
@@ -104,6 +107,12 @@ class Model():
         X = np.array(flattened_X)
         y = np.array(y)
         
+        # This version of X and y will be used for prediction
+        self.X_pred = X
+        self.y_pred = y
+        np.save('X.npy', X, allow_pickle=False, fix_imports=False)
+        np.save('y.npy', y, allow_pickle=False, fix_imports=False)
+        
         # Stablish a background:anomaly ratio of 5:1
         # Find indices where y is 1 and 0
         indices_anomalies = np.where(y == 1)[0]
@@ -194,6 +203,10 @@ class Model():
 
             # Fit the model to the training data
             model.fit(X_train, y_train)
+            
+            # Save the model to disk
+            filename = 'rf_model.sav'
+            pickle.dump(model, open(filename, 'wb'))
 
             # Make predictions on the testing data
             y_hat = model.predict(X_test)
@@ -217,6 +230,26 @@ class Model():
         print(confusion_matrix)
         
         return num_anomalies, tn, fp, fn, tp
+    
+    @tictoc
+    def predictor(self):
+        
+        # Load the model
+        filename = 'models/rf_model.sav'
+        loaded_model = pickle.load(open(filename, 'rb'))
+        
+        # Load X and y data
+        X = np.load('X.npy', allow_pickle=False, fix_imports=False)
+        y = np.load('y.npy', allow_pickle=False, fix_imports=False)
+        
+        # Get the number of rows labeled as anomalies in y_test
+        num_anomalies = len([i for i in y if i==1])
+        print('Number of anomalies', num_anomalies)
+        
+        # Predict on the whole dataset
+        from sklearn.metrics import accuracy_score, confusion_matrix
+        confusion_matrix = confusion_matrix(y, loaded_model.predict(X))
+        print(confusion_matrix)
 
 
 if __name__ == '__main__':
@@ -224,14 +257,18 @@ if __name__ == '__main__':
     # Create an instance of class
     model = Model(station=901, window_size=8, stride=1, search=False)
     
-    # Preprocess the data (normalizing and smoothing)
-    model.preprocessor()
+    # # Preprocess the data (normalizing and smoothing)
+    # model.preprocessor()
     
-    # Build the windows
-    model.windower()
+    # # Build the windows
+    # model.windower()
     
-    # Shuffle and split the data in train and test sets
-    X_train, y_train, X_test, y_test = model.splitter()
+    # # Shuffle and split the data in train and test sets
+    # X_train, y_train, X_test, y_test = model.splitter()
     
-    num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
+    # # Train and test the model
+    # num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
+    
+    # Predict
+    model.predictor()
     

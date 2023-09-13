@@ -1,2 +1,9 @@
 # Ignore the venv
 venv
+
+# Ignore the models
+models
+
+# Ignore large files
+X.npy
+y.npy
