@@ -15,7 +15,7 @@ class Model():
         
         self.smoothed_data = None
         self.X_pred = None
-        self.Y_pred = None
+        self.y_pred = None
         self.X = None
         self.y = None
     
@@ -107,22 +107,16 @@ class Model():
         X = np.array(flattened_X)
         y = np.array(y)
         
-        # This version of X and y will be used for prediction
-        self.X_pred = X
-        self.y_pred = y
-        np.save('X.npy', X, allow_pickle=False, fix_imports=False)
-        np.save('y.npy', y, allow_pickle=False, fix_imports=False)
-        
         # Stablish a background:anomaly ratio of 5:1
         # Find indices where y is 1 and 0
         indices_anomalies = np.where(y == 1)[0]
         indices_nonanomalies = np.where(y == 0)[0]
         
         # Randomly sample 5 times as many pairs from y=0 to balance the dataset
-        num_samples_nonanomalies = len(indices_anomalies) * 5
+        num_samples_nonanomalies = len(indices_anomalies) * 12
         selected_indices_nonanomalies = np.random.choice(indices_nonanomalies, num_samples_nonanomalies, replace=False)
         
-        # Combine the selected pais
+        # Combine the selected pairs
         selected_indices = np.concatenate((indices_anomalies, selected_indices_nonanomalies))
         X = X[selected_indices]
         y = y[selected_indices]
@@ -131,6 +125,51 @@ class Model():
         self.X = X
         self.y = y
 
+    @tictoc
+    def windower_prediction(self):
+        """This function reads the database and creates the
+        non-overlapping windows for prediction.
+        ---------
+        Arguments:
+        self
+        
+        Returns:
+        X (np.array): data.
+        y (np.array): labels.
+        """
+        
+        # Calculate the maximum valid start index for a window
+        max_start_idx = len(self.smoothed_data) - self.window_size
+        
+        # List to store the flattened window rows and the target labels
+        flattened_X = []
+        y = []
+        
+        # Iterate through the original DataFrame with the specified window size to create non-overlapping windows
+        for i in range(0, max_start_idx + 1, self.window_size):
+            
+            # Calculate the end index for the window
+            end_idx = i + self.window_size
+            
+            # Extract the window of rows
+            window_data = self.smoothed_data.iloc[i:end_idx, 1:7]
+            window_label = self.smoothed_data.iloc[i:end_idx, -1]
+            
+            # Convert the window rows to a 2D array and append to flattened_rows
+            flattened_X.append(window_data.values.flatten())
+            
+            # Store the label for each window
+            window_label = 1 if np.mean(window_label) >= 0.5 else 0
+            y.append(window_label)
+        
+        # Convert the flattened data and labels list to a Numpy array
+        X = np.array(flattened_X)
+        y = np.array(y)
+        
+        # This version of X and y will be used for prediction
+        self.X_pred = X
+        self.y_pred = y
+        
     @tictoc
     def splitter(self):
         """This function splits the windowed data into the training
@@ -194,7 +233,6 @@ class Model():
             # Make predictions on the testing data
             y_hat = best_model.predict(X_test)
 
-
         elif self.search == False:
             
             # Call the model
@@ -205,7 +243,7 @@ class Model():
             model.fit(X_train, y_train)
             
             # Save the model to disk
-            filename = 'rf_model.sav'
+            filename = 'models/rf_model.sav'
             pickle.dump(model, open(filename, 'wb'))
 
             # Make predictions on the testing data
@@ -233,41 +271,46 @@ class Model():
     
     @tictoc
     def predictor(self):
+        """
+        Achieves prediction with the trained and tested model on
+        non-overlapping windows.
+        """
         
         # Load the model
         filename = 'models/rf_model.sav'
         loaded_model = pickle.load(open(filename, 'rb'))
         
-        # Load X and y data
-        X = np.load('X.npy', allow_pickle=False, fix_imports=False)
-        y = np.load('y.npy', allow_pickle=False, fix_imports=False)
-        
         # Get the number of rows labeled as anomalies in y_test
-        num_anomalies = len([i for i in y if i==1])
+        num_anomalies = len([i for i in self.y_pred if i==1])
         print('Number of anomalies', num_anomalies)
         
         # Predict on the whole dataset
+        y_hat = loaded_model.predict(self.X_pred)
+        # np.save('y_rf.npy', y_hat, allowç_pickle=False, fix_imports=False)
         from sklearn.metrics import accuracy_score, confusion_matrix
-        confusion_matrix = confusion_matrix(y, loaded_model.predict(X))
+        confusion_matrix = confusion_matrix(self.y_pred, loaded_model.predict(self.X_pred))
         print(confusion_matrix)
 
 
 if __name__ == '__main__':
     
-    # Create an instance of class
-    model = Model(station=901, window_size=8, stride=1, search=False)
+    # Create an instance of the class
+    model = Model(station=901, window_size=16, stride=1, search=False)
     
-    # # Preprocess the data (normalizing and smoothing)
-    # model.preprocessor()
+    # Preprocess the data (normalizing and smoothing)
+    model.preprocessor()
     
-    # # Build the windows
-    # model.windower()
+    # Build the windows
+    model.windower()
     
-    # # Shuffle and split the data in train and test sets
-    # X_train, y_train, X_test, y_test = model.splitter()
+    # Build the windows for predictions
+    model.windower_prediction()
     
-    # # Train and test the model
-    # num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
+    # Shuffle and split the data in train and test sets
+    X_train, y_train, X_test, y_test = model.splitter()
+    
+    # Train and test the model
+    num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
     
     # Predict
     model.predictor()
