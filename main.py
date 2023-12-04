@@ -286,7 +286,7 @@ class Model():
         
         # Predict on the whole dataset
         y_hat = loaded_model.predict(self.X_pred)
-        # np.save('y_rf.npy', y_hat, allowç_pickle=False, fix_imports=False)
+        # np.save(f'y_rf_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
         from sklearn.metrics import accuracy_score, confusion_matrix
         confusion_matrix = confusion_matrix(self.y_pred, loaded_model.predict(self.X_pred))
         print(confusion_matrix)
@@ -295,7 +295,7 @@ class Model():
 if __name__ == '__main__':
     
     # Create an instance of the class
-    model = Model(station=901, window_size=16, stride=1, search=False)
+    model = Model(station=910, window_size=16, stride=1, search=False)
     
     # Preprocess the data (normalizing and smoothing)
     model.preprocessor()
