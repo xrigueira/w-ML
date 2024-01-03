@@ -107,12 +107,12 @@ class Model():
         X = np.array(flattened_X)
         y = np.array(y)
         
-        # Stablish a background:anomaly ratio of 5:1
+        # Stablish a background:anomaly ratio of 12:1
         # Find indices where y is 1 and 0
         indices_anomalies = np.where(y == 1)[0]
         indices_nonanomalies = np.where(y == 0)[0]
         
-        # Randomly sample 5 times as many pairs from y=0 to balance the dataset
+        # Randomly sample 12 times as many pairs from y=0 to balance the dataset
         num_samples_nonanomalies = len(indices_anomalies) * 12
         selected_indices_nonanomalies = np.random.choice(indices_nonanomalies, num_samples_nonanomalies, replace=False)
         
