@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 
 from tictoc import tictoc
 
+"""The class defined here and the pipeline are indentical to those in main.
+The only difference is that the model is trained with a Logistic Regression Classifier,
+instead of a Random Forest Classifier."""
+
 class Model():
     
     def __init__(self, station, window_size, stride, search) -> None:
@@ -201,8 +205,8 @@ class Model():
         return X_train, y_train, X_test, y_test
     
     @tictoc
-    def rf(self, X_train, y_train, X_test, y_test):
-        """This method implements classification with Random Forest.
+    def lr(self, X_train, y_train, X_test, y_test):
+        """This method implements classification with Logistic Regression.
         ----------
         Arguments:
         X_train (np.array): data training set.
@@ -216,34 +220,36 @@ class Model():
         if self.search == True:
             
             # Define the parameters to iterate over
-            param_dist = {'n_estimators': [50, 75, 100, 125, 150, 175], 'max_depth': [1, 2, 3, 4, 5, 10, 15, 20, 50, None],
-                        'min_samples_split': [2, 4, 6, 8, 10], 'min_samples_leaf': [1, 2, 3, 4, 5]}
-            
+            param_dist = {'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000], 
+                        'penalty': ['l1', 'l2', 'elasticnet', 'none']}
+
             from sklearn.model_selection import RandomizedSearchCV
-            from sklearn.ensemble import RandomForestClassifier
-            rand_search = RandomizedSearchCV(RandomForestClassifier(random_state=0), param_distributions = param_dist, n_iter=5, cv=5)
-            
+            from sklearn.linear_model import LogisticRegression
+            model = LogisticRegression(random_state=0)
+
+            rand_search = RandomizedSearchCV(model, param_distributions = param_dist, n_iter=5, cv=5)
+
             rand_search.fit(X_train, y_train)
-            
+
             # Get best params
             best_params = rand_search.best_params_
             best_model = rand_search.best_estimator_
             print('Best params', best_params, '| Best model', best_model)
-            
+
             # Make predictions on the testing data
             y_hat = best_model.predict(X_test)
 
         elif self.search == False:
             
             # Call the model
-            from sklearn.ensemble import RandomForestClassifier
-            model = RandomForestClassifier(random_state=0)
+            from sklearn.linear_model import LogisticRegression
+            model = LogisticRegression(random_state=0)
 
             # Fit the model to the training data
             model.fit(X_train, y_train)
             
             # Save the model to disk
-            filename = 'models/rf_model.sav'
+            filename = 'models/lr_model.sav'
             pickle.dump(model, open(filename, 'wb'))
 
             # Make predictions on the testing data
@@ -277,7 +283,7 @@ class Model():
         """
         
         # Load the model
-        filename = 'models/rf_model.sav'
+        filename = 'models/lr_model.sav'
         loaded_model = pickle.load(open(filename, 'rb'))
         
         # Get the number of rows labeled as anomalies in y_test
@@ -286,7 +292,7 @@ class Model():
         
         # Predict on the whole dataset
         y_hat = loaded_model.predict(self.X_pred)
-        # np.save(f'y_rf_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
+        # np.save(f'y_lr_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
         from sklearn.metrics import accuracy_score, confusion_matrix
         confusion_matrix = confusion_matrix(self.y_pred, loaded_model.predict(self.X_pred))
         print(confusion_matrix)

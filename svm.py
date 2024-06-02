@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 
 from tictoc import tictoc
 
+"""The class defined here and the pipeline are indentical to those in main.
+The only difference is that the model is trained with a One-Class Support Vector Machine,
+instead of a Random Forest Classifier."""
+
 class Model():
     
     def __init__(self, station, window_size, stride, search) -> None:
@@ -201,8 +205,8 @@ class Model():
         return X_train, y_train, X_test, y_test
     
     @tictoc
-    def rf(self, X_train, y_train, X_test, y_test):
-        """This method implements classification with Random Forest.
+    def svm(self, X_train, y_train, X_test, y_test):
+        """This method implements classification with a One-Class Support Vector Machine.
         ----------
         Arguments:
         X_train (np.array): data training set.
@@ -216,34 +220,37 @@ class Model():
         if self.search == True:
             
             # Define the parameters to iterate over
-            param_dist = {'n_estimators': [50, 75, 100, 125, 150, 175], 'max_depth': [1, 2, 3, 4, 5, 10, 15, 20, 50, None],
-                        'min_samples_split': [2, 4, 6, 8, 10], 'min_samples_leaf': [1, 2, 3, 4, 5]}
-            
+            param_dist = {'C': [0.1, 1, 10, 100, 1000], 
+                        'gamma': [1, 0.1, 0.01, 0.001, 0.0001],
+                        'kernel': ['rbf', 'linear', 'poly', 'sigmoid']} 
+
             from sklearn.model_selection import RandomizedSearchCV
-            from sklearn.ensemble import RandomForestClassifier
-            rand_search = RandomizedSearchCV(RandomForestClassifier(random_state=0), param_distributions = param_dist, n_iter=5, cv=5)
-            
+            from sklearn.svm import OneClassSVM
+            model = OneClassSVM(random_state=0)
+
+            rand_search = RandomizedSearchCV(model, param_distributions = param_dist, n_iter=5, cv=5)
+
             rand_search.fit(X_train, y_train)
-            
+
             # Get best params
             best_params = rand_search.best_params_
             best_model = rand_search.best_estimator_
             print('Best params', best_params, '| Best model', best_model)
-            
+
             # Make predictions on the testing data
             y_hat = best_model.predict(X_test)
 
         elif self.search == False:
             
             # Call the model
-            from sklearn.ensemble import RandomForestClassifier
-            model = RandomForestClassifier(random_state=0)
+            from sklearn.svm import OneClassSVM
+            model = OneClassSVM(kernel='rbf', nu=0.1, gamma=0.1)
 
             # Fit the model to the training data
-            model.fit(X_train, y_train)
+            model.fit(X_train)
             
             # Save the model to disk
-            filename = 'models/rf_model.sav'
+            filename = 'models/svm_model.sav'
             pickle.dump(model, open(filename, 'wb'))
 
             # Make predictions on the testing data
@@ -263,6 +270,7 @@ class Model():
             confusion_matrix = confusion_matrix(y_test, best_model.predict(X_test))
         elif self.search == False:
             confusion_matrix = confusion_matrix(y_test, model.predict(X_test))
+            print(confusion_matrix)
             tn, fp, fn, tp = confusion_matrix.ravel()
         
         print(confusion_matrix)
@@ -277,7 +285,7 @@ class Model():
         """
         
         # Load the model
-        filename = 'models/rf_model.sav'
+        filename = 'models/svm_model.sav'
         loaded_model = pickle.load(open(filename, 'rb'))
         
         # Get the number of rows labeled as anomalies in y_test
@@ -286,7 +294,7 @@ class Model():
         
         # Predict on the whole dataset
         y_hat = loaded_model.predict(self.X_pred)
-        # np.save(f'y_rf_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
+        # np.save(f'y_svm_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
         from sklearn.metrics import accuracy_score, confusion_matrix
         confusion_matrix = confusion_matrix(self.y_pred, loaded_model.predict(self.X_pred))
         print(confusion_matrix)
@@ -310,7 +318,7 @@ if __name__ == '__main__':
     X_train, y_train, X_test, y_test = model.splitter()
     
     # Train and test the model
-    num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
+    num_anomalies, tn, fp, fn, tp = model.svm(X_train, y_train, X_test, y_test)
     
     # Predict
     model.predictor()
