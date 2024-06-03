@@ -255,6 +255,9 @@ class Model():
 
             # Make predictions on the testing data
             y_hat = model.predict(X_test)
+            
+            # Turn the predictions into 0s and 1s
+            y_hat = np.where(y_hat == -1, 1, 0)
         
         # Get the accuracy of the model
         from sklearn.metrics import accuracy_score, confusion_matrix
@@ -267,9 +270,13 @@ class Model():
 
         # Display the confusion matrix
         if self.search == True:
-            confusion_matrix = confusion_matrix(y_test, best_model.predict(X_test))
+            y_hat = best_model.predict(X_test)
+            y_hat = np.where(y_hat == -1, 1, 0)
+            confusion_matrix = confusion_matrix(y_test, y_hat)
         elif self.search == False:
-            confusion_matrix = confusion_matrix(y_test, model.predict(X_test))
+            y_hat = model.predict(X_test)
+            y_hat = np.where(y_hat == -1, 1, 0)
+            confusion_matrix = confusion_matrix(y_test, y_hat)
             print(confusion_matrix)
             tn, fp, fn, tp = confusion_matrix.ravel()
         
@@ -294,9 +301,10 @@ class Model():
         
         # Predict on the whole dataset
         y_hat = loaded_model.predict(self.X_pred)
+        y_hat = np.where(y_hat == -1, 1, 0)
         # np.save(f'y_svm_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
         from sklearn.metrics import accuracy_score, confusion_matrix
-        confusion_matrix = confusion_matrix(self.y_pred, loaded_model.predict(self.X_pred))
+        confusion_matrix = confusion_matrix(self.y_pred, y_hat)
         print(confusion_matrix)
 
 
@@ -316,7 +324,7 @@ if __name__ == '__main__':
     
     # Shuffle and split the data in train and test sets
     X_train, y_train, X_test, y_test = model.splitter()
-    
+
     # Train and test the model
     num_anomalies, tn, fp, fn, tp = model.svm(X_train, y_train, X_test, y_test)
     

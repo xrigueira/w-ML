@@ -316,7 +316,7 @@ if __name__ == '__main__':
     X_train, y_train, X_test, y_test = model.splitter()
     
     # Train and test the model
-    num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
+    num_anomalies, tn, fp, fn, tp = model.lr(X_train, y_train, X_test, y_test)
     
     # Predict
     model.predictor()
