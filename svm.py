@@ -226,7 +226,7 @@ class Model():
 
             from sklearn.model_selection import RandomizedSearchCV
             from sklearn.svm import OneClassSVM
-            model = OneClassSVM(random_state=0)
+            model = OneClassSVM()
 
             rand_search = RandomizedSearchCV(model, param_distributions = param_dist, n_iter=5, cv=5)
 
@@ -311,7 +311,7 @@ class Model():
 if __name__ == '__main__':
     
     # Create an instance of the class
-    model = Model(station=901, window_size=16, stride=1, search=False)
+    model = Model(station=901, window_size=16, stride=1, search=True)
     
     # Preprocess the data (normalizing and smoothing)
     model.preprocessor()
@@ -328,6 +328,6 @@ if __name__ == '__main__':
     # Train and test the model
     num_anomalies, tn, fp, fn, tp = model.svm(X_train, y_train, X_test, y_test)
     
-    # Predict
-    model.predictor()
+    # # Predict
+    # model.predictor()
     

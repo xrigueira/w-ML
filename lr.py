@@ -221,13 +221,13 @@ class Model():
             
             # Define the parameters to iterate over
             param_dist = {'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000], 
-                        'penalty': ['l1', 'l2', 'elasticnet', 'none']}
+                        'penalty': ['l2']}
 
             from sklearn.model_selection import RandomizedSearchCV
             from sklearn.linear_model import LogisticRegression
-            model = LogisticRegression(random_state=0)
+            model = LogisticRegression(solver='newton-cg', random_state=0)
 
-            rand_search = RandomizedSearchCV(model, param_distributions = param_dist, n_iter=5, cv=5)
+            rand_search = RandomizedSearchCV(model, param_distributions = param_dist, n_iter=21, cv=5)
 
             rand_search.fit(X_train, y_train)
 
@@ -243,7 +243,7 @@ class Model():
             
             # Call the model
             from sklearn.linear_model import LogisticRegression
-            model = LogisticRegression(random_state=0)
+            model = LogisticRegression(penalty='l2', C=100, random_state=0, solver='newton-cg')
 
             # Fit the model to the training data
             model.fit(X_train, y_train)
