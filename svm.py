@@ -220,15 +220,25 @@ class Model():
         if self.search == True:
             
             # Define the parameters to iterate over
-            param_dist = {'C': [0.1, 1, 10, 100, 1000], 
-                        'gamma': [1, 0.1, 0.01, 0.001, 0.0001],
-                        'kernel': ['rbf', 'linear', 'poly', 'sigmoid']} 
+            param_dist = {'kernel': ['sigmoid'], 
+                        'gamma': ['scale', 'auto'],
+                        'nu': [0.1, 0.2, 0.3, 0.4, 0.5]
+                        } 
 
             from sklearn.model_selection import RandomizedSearchCV
             from sklearn.svm import OneClassSVM
             model = OneClassSVM()
 
-            rand_search = RandomizedSearchCV(model, param_distributions = param_dist, n_iter=5, cv=5)
+            from sklearn.metrics import make_scorer, f1_score
+            
+            # Define a custom scorer because the OneClassSVM assigns -1 for outliers and 1 for inliers, which should be 1 and 0 according to my labels
+            def custom_f1_score(y_true, y_pred):
+                y_pred = np.where(y_pred == 1, 0, 1)  # replace 1 with the negative class label in y_true, and -1 with the positive class label
+                return f1_score(y_true, y_pred)
+            
+            scorer = make_scorer(custom_f1_score)
+
+            rand_search = RandomizedSearchCV(model, param_distributions = param_dist, scoring=scorer, n_iter=10, cv=5)
 
             rand_search.fit(X_train, y_train)
 
@@ -244,7 +254,7 @@ class Model():
             
             # Call the model
             from sklearn.svm import OneClassSVM
-            model = OneClassSVM(kernel='rbf', nu=0.1, gamma=0.1)
+            model = OneClassSVM(kernel='linear', nu=0.1, gamma='scale')
 
             # Fit the model to the training data
             model.fit(X_train)
@@ -311,7 +321,7 @@ class Model():
 if __name__ == '__main__':
     
     # Create an instance of the class
-    model = Model(station=901, window_size=16, stride=1, search=True)
+    model = Model(station=901, window_size=16, stride=1, search=False)
     
     # Preprocess the data (normalizing and smoothing)
     model.preprocessor()
@@ -328,6 +338,6 @@ if __name__ == '__main__':
     # Train and test the model
     num_anomalies, tn, fp, fn, tp = model.svm(X_train, y_train, X_test, y_test)
     
-    # # Predict
-    # model.predictor()
+    # Predict
+    model.predictor()
     
