@@ -115,7 +115,7 @@ class Model():
             flattened_X.append(window_data.values.flatten())
             
             # Store the label for each window
-            window_label = 1 if np.mean(window_label) >= 0.5 else 0
+            window_label = 1 if np.mean(window_label) >= 0.85 else 0
             y.append(window_label)
         
         # Convert the flattened data and labels list to a Numpy array
@@ -173,7 +173,7 @@ class Model():
             flattened_X.append(window_data.values.flatten())
             
             # Store the label for each window
-            window_label = 1 if np.mean(window_label) >= 0.5 else 0
+            window_label = 1 if np.mean(window_label) >= 0.85 else 0
             y.append(window_label)
         
         # Convert the flattened data and labels list to a Numpy array
@@ -492,14 +492,14 @@ class Model():
 if __name__ == '__main__':
     
     # Create an instance of the class
-    model = Model(model_name='rf', station=901, window_size=16, stride=1, search=False)
+    model = Model(model_name='rf', station=901, window_size=32, stride=1, search=False)
     
     # Preprocess the clean data (normalizing and smoothing)
     model.preprocessor(clean=True)
     
     # Build the windows for training and testing
     model.windower()
-    
+
     # Preprocess the complete data (normalizing and smoothing)
     model.preprocessor(clean=False)
     
