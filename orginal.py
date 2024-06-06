@@ -9,9 +9,10 @@ class Model():
     
     """This class preprocesses the data, creates the windows, splits the data into
     training and test sets, and trains the model, trains a ML (RF, SVM, LR) model and performs inference.
-    
-    The program in the main.py file trains the algorithm on the clean dataset and performs prediction 
-    on the whole dataset
+
+    The difference with the program in the main.py file is that this one works on the whole dataset, including
+    the anomalies not detected by the functional model from w-fda (MSA). Whereas, the program in the main.py file
+    trains the algorithm on the clean dataset and performs prediction on the whole dataset.
     """
 
     def __init__(self, model_name, station, window_size, stride, search) -> None:
@@ -22,7 +23,6 @@ class Model():
         self.search = search
         
         self.smoothed_data = None
-        self.smoothed_data_clean = None
         self.X_pred = None
         self.y_pred = None
         self.X = None
@@ -39,7 +39,7 @@ class Model():
         return smoothed_values
     
     @tictoc
-    def preprocessor(self, clean=True):
+    def preprocessor(self):
         """This function normalizes and smoothes the data.
         ---------
         Arguments:
@@ -49,10 +49,7 @@ class Model():
         smoothed_data (Pandas DataFrame): smoothed data."""
         
         # Read the data
-        if clean == True:
-            data = pd.read_csv(f'clean_data/labeled_{self.station}_pro.csv', sep=',', encoding='utf-8')
-        else:
-            data = pd.read_csv(f'data/labeled_{self.station}_pro.csv', sep=',', encoding='utf-8')
+        data = pd.read_csv(f'data/labeled_{self.station}_pro.csv', sep=',', encoding='utf-8')
         
         # Normalize the data
         from sklearn.preprocessing import MinMaxScaler
@@ -75,16 +72,13 @@ class Model():
             for col, smoothed_values in zip(data.columns[1:-2], smoothed_columns):
                 smoothed_data[col] = smoothed_values
         
-        if clean == True:
-            self.smoothed_data_clean = smoothed_data
-            # smoothed_data.to_csv(f'clean_data/labeled_{self.station}_smo.csv', encoding='utf-8', sep=',', index=False)
-        else:
-            self.smoothed_data = smoothed_data
-            # smoothed_data.to_csv(f'data/labeled_{self.station}_smo.csv', encoding='utf-8', sep=',', index=False)
+        self.smoothed_data = smoothed_data
+        # smoothed_data.to_csv(f'data/labeled_{self.station}_smo.csv', encoding='utf-8', sep=',', index=False)
 
     @tictoc
     def windower(self):
-        """This function creates the overlapping windows from the clean smoothed data.
+        """This function reads the database and creates the
+        windows.
         ---------
         Arguments:
         self
@@ -95,7 +89,7 @@ class Model():
         """
         
         # Calculate the maximum valid start index for a window
-        max_start_idx = len(self.smoothed_data_clean) - self.window_size
+        max_start_idx = len(self.smoothed_data) - self.window_size
         
         # List to store the flattened window rows and the target labels
         flattened_X = []
@@ -108,8 +102,8 @@ class Model():
             end_idx = i + self.window_size
             
             # Extract the window of rows
-            window_data = self.smoothed_data_clean.iloc[i:end_idx, 1:7]
-            window_label = self.smoothed_data_clean.iloc[i:end_idx, -1]
+            window_data = self.smoothed_data.iloc[i:end_idx, 1:7]
+            window_label = self.smoothed_data.iloc[i:end_idx, -1]
             
             # Convert the window rows to a 2D array and append to flattened_rows
             flattened_X.append(window_data.values.flatten())
@@ -142,7 +136,8 @@ class Model():
     
     @tictoc
     def windower_prediction(self):
-        """This function creates the non-overlapping windows from the full smoothed data for prediction.
+        """This function reads the database and creates the
+        non-overlapping windows for prediction.
         ---------
         Arguments:
         self
@@ -179,7 +174,7 @@ class Model():
         # Convert the flattened data and labels list to a Numpy array
         X = np.array(flattened_X)
         y = np.array(y)
-
+        
         # This version of X and y will be used for prediction
         self.X_pred = X
         self.y_pred = y
@@ -209,8 +204,8 @@ class Model():
         shuffled_X, shuffled_y = combined[:, :-1], combined[:, -1]
         
         # Split the shuffled data into the training and testing set
-        X_train, y_train = shuffled_X[:int(len(shuffled_X) * 0.9)], shuffled_y[:int(len(shuffled_X) * 0.9)]
-        X_test, y_test = shuffled_X[int(len(shuffled_X) * 0.9):], shuffled_y[int(len(shuffled_X) * 0.9):]
+        X_train, y_train = shuffled_X[:int(len(shuffled_X) * 0.75)], shuffled_y[:int(len(shuffled_X) * 0.75)]
+        X_test, y_test = shuffled_X[int(len(shuffled_X) * 0.75):], shuffled_y[int(len(shuffled_X) * 0.75):]
         
         return X_train, y_train, X_test, y_test
     
@@ -494,21 +489,18 @@ if __name__ == '__main__':
     # Create an instance of the class
     model = Model(model_name='rf', station=901, window_size=16, stride=1, search=False)
     
-    # Preprocess the clean data (normalizing and smoothing)
-    model.preprocessor(clean=True)
+    # Preprocess the data (normalizing and smoothing)
+    model.preprocessor()
     
     # Build the windows for training and testing
     model.windower()
-    
-    # Preprocess the complete data (normalizing and smoothing)
-    model.preprocessor(clean=False)
     
     # Build the windows for predictions
     model.windower_prediction()
     
     # Shuffle and split the data in train and test sets
     X_train, y_train, X_test, y_test = model.splitter()
-
+    
     # Train and test the model
     num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
     

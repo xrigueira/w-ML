@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from main import Model
+from orginal import Model
 
 if __name__ == '__main__':
     
