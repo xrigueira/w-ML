@@ -16,7 +16,7 @@ if __name__ == '__main__':
         for stride in strides:
 
             # Create an instance of class
-            model = Model(station=901, window_size=window_size, stride=stride, search=False)
+            model = Model(model_name='rf', station=901, window_size=window_size, stride=stride, search=False)
     
             # Preprocess the data (normalizing and smoothing)
             model.preprocessor()

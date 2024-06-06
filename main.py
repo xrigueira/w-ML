@@ -7,7 +7,12 @@ from tictoc import tictoc
 
 class Model():
     
-    def __init__(self, station, window_size, stride, search) -> None:
+    """This class preprocesses the data, creates the windows, splits the data into
+    training and test sets, and trains the model, trains a ML (RF, SVM, LR) model and performs inference.
+    """
+
+    def __init__(self, model_name, station, window_size, stride, search) -> None:
+        self.model_name = model_name
         self.station = station
         self.window_size = window_size
         self.stride = stride
@@ -65,7 +70,7 @@ class Model():
         
         self.smoothed_data = smoothed_data
         # smoothed_data.to_csv(f'data/labeled_{self.station}_smo.csv', encoding='utf-8', sep=',', index=False)
-    
+
     @tictoc
     def windower(self):
         """This function reads the database and creates the
@@ -124,7 +129,7 @@ class Model():
         # Store the results
         self.X = X
         self.y = y
-
+    
     @tictoc
     def windower_prediction(self):
         """This function reads the database and creates the
@@ -270,32 +275,215 @@ class Model():
         return num_anomalies, tn, fp, fn, tp
     
     @tictoc
+    def svm(self, X_train, y_train, X_test, y_test):
+        """This method implements classification with a One-Class Support Vector Machine.
+        ----------
+        Arguments:
+        X_train (np.array): data training set.
+        y_train (np.array) labels training set.
+        X_test (np.array): data test set.
+        y_test (np.array): labels test set.
+        
+        Returns:
+        None."""
+        
+        if self.search == True:
+            
+            # Define the parameters to iterate over
+            param_dist = {'kernel': ['sigmoid'], 
+                        'gamma': ['scale', 'auto'],
+                        'nu': [0.1, 0.2, 0.3, 0.4, 0.5]
+                        } 
+
+            from sklearn.model_selection import RandomizedSearchCV
+            from sklearn.svm import OneClassSVM
+            model = OneClassSVM()
+
+            from sklearn.metrics import make_scorer, f1_score
+            
+            # Define a custom scorer because the OneClassSVM assigns -1 for outliers and 1 for inliers, which should be 1 and 0 according to my labels
+            def custom_f1_score(y_true, y_pred):
+                y_pred = np.where(y_pred == 1, 0, 1)  # replace 1 with the negative class label in y_true, and -1 with the positive class label
+                return f1_score(y_true, y_pred)
+            
+            scorer = make_scorer(custom_f1_score)
+
+            rand_search = RandomizedSearchCV(model, param_distributions = param_dist, scoring=scorer, n_iter=10, cv=5)
+
+            rand_search.fit(X_train, y_train)
+
+            # Get best params
+            best_params = rand_search.best_params_
+            best_model = rand_search.best_estimator_
+            print('Best params', best_params, '| Best model', best_model)
+
+            # Make predictions on the testing data
+            y_hat = best_model.predict(X_test)
+
+        elif self.search == False:
+            
+            # Call the model
+            from sklearn.svm import OneClassSVM
+            model = OneClassSVM(kernel='linear', nu=0.1, gamma='scale')
+
+            # Fit the model to the training data
+            model.fit(X_train)
+            
+            # Save the model to disk
+            filename = 'models/svm_model.sav'
+            pickle.dump(model, open(filename, 'wb'))
+
+            # Make predictions on the testing data
+            y_hat = model.predict(X_test)
+            
+            # Turn the predictions into 0s and 1s
+            y_hat = np.where(y_hat == -1, 1, 0)
+        
+        # Get the accuracy of the model
+        from sklearn.metrics import accuracy_score, confusion_matrix
+        accuracy = accuracy_score(y_test, y_hat)
+        print('Accuracy', accuracy)
+
+        # Get the number of rows labeled as anomalies in y_test
+        num_anomalies = len([i for i in y_test if i==1])
+        print('Number of anomalies', num_anomalies)
+
+        # Display the confusion matrix
+        if self.search == True:
+            y_hat = best_model.predict(X_test)
+            y_hat = np.where(y_hat == -1, 1, 0)
+            confusion_matrix = confusion_matrix(y_test, y_hat)
+        elif self.search == False:
+            y_hat = model.predict(X_test)
+            y_hat = np.where(y_hat == -1, 1, 0)
+            confusion_matrix = confusion_matrix(y_test, y_hat)
+            print(confusion_matrix)
+            tn, fp, fn, tp = confusion_matrix.ravel()
+        
+        print(confusion_matrix)
+        
+        return num_anomalies, tn, fp, fn, tp
+    
+    @tictoc
+    def lr(self, X_train, y_train, X_test, y_test):
+        """This method implements classification with Logistic Regression.
+        ----------
+        Arguments:
+        X_train (np.array): data training set.
+        y_train (np.array) labels training set.
+        X_test (np.array): data test set.
+        y_test (np.array): labels test set.
+        
+        Returns:
+        None."""
+        
+        if self.search == True:
+            
+            # Define the parameters to iterate over
+            param_dist = {'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000], 
+                        'penalty': ['l2']}
+
+            from sklearn.model_selection import RandomizedSearchCV
+            from sklearn.linear_model import LogisticRegression
+            model = LogisticRegression(solver='newton-cg', random_state=0)
+
+            rand_search = RandomizedSearchCV(model, param_distributions = param_dist, n_iter=21, cv=5)
+
+            rand_search.fit(X_train, y_train)
+
+            # Get best params
+            best_params = rand_search.best_params_
+            best_model = rand_search.best_estimator_
+            print('Best params', best_params, '| Best model', best_model)
+
+            # Make predictions on the testing data
+            y_hat = best_model.predict(X_test)
+
+        elif self.search == False:
+            
+            # Call the model
+            from sklearn.linear_model import LogisticRegression
+            model = LogisticRegression(penalty='l2', C=100, random_state=0, solver='newton-cg')
+
+            # Fit the model to the training data
+            model.fit(X_train, y_train)
+            
+            # Save the model to disk
+            filename = 'models/lr_model.sav'
+            pickle.dump(model, open(filename, 'wb'))
+
+            # Make predictions on the testing data
+            y_hat = model.predict(X_test)
+        
+        # Get the accuracy of the model
+        from sklearn.metrics import accuracy_score, confusion_matrix
+        accuracy = accuracy_score(y_test, y_hat)
+        print('Accuracy', accuracy)
+
+        # Get the number of rows labeled as anomalies in y_test
+        num_anomalies = len([i for i in y_test if i==1])
+        print('Number of anomalies', num_anomalies)
+
+        # Display the confusion matrix
+        if self.search == True:
+            confusion_matrix = confusion_matrix(y_test, best_model.predict(X_test))
+        elif self.search == False:
+            confusion_matrix = confusion_matrix(y_test, model.predict(X_test))
+            tn, fp, fn, tp = confusion_matrix.ravel()
+        
+        print(confusion_matrix)
+        
+        return num_anomalies, tn, fp, fn, tp
+    
+    @tictoc
     def predictor(self):
         """
-        Achieves prediction with the trained and tested model on
+        Performs prediction with the trained and tested model on
         non-overlapping windows.
         """
+
+        # Load the model form disk
+        if self.model_name == 'rf':
+            filename = 'models/rf_model.sav'
+        elif self.model_name == 'svm':
+            filename = 'models/svm_model.sav'
+        elif self.model_name == 'lr':
+            filename = 'models/lr_model.sav'
+        else: 
+            print('Invalid model name')
         
-        # Load the model
-        filename = 'models/rf_model.sav'
         loaded_model = pickle.load(open(filename, 'rb'))
-        
+
         # Get the number of rows labeled as anomalies in y_test
         num_anomalies = len([i for i in self.y_pred if i==1])
         print('Number of anomalies', num_anomalies)
-        
-        # Predict on the whole dataset
-        y_hat = loaded_model.predict(self.X_pred)
-        # np.save(f'y_rf_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
-        from sklearn.metrics import accuracy_score, confusion_matrix
-        confusion_matrix = confusion_matrix(self.y_pred, loaded_model.predict(self.X_pred))
-        print(confusion_matrix)
 
+        # Make predictions on the testing data
+        if self.model_name == 'rf':
+            y_hat = loaded_model.predict(self.X_pred)
+            # np.save(f'y_rf_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
+            from sklearn.metrics import accuracy_score, confusion_matrix
+            confusion_matrix = confusion_matrix(self.y_pred, loaded_model.predict(self.X_pred))
+            print(confusion_matrix)
+        elif self.model_name == 'svm':
+            # Predict on the whole dataset
+            y_hat = loaded_model.predict(self.X_pred)
+            y_hat = np.where(y_hat == -1, 1, 0)
+            # np.save(f'y_svm_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
+            from sklearn.metrics import accuracy_score, confusion_matrix
+            confusion_matrix = confusion_matrix(self.y_pred, y_hat)
+            print(confusion_matrix)
+        elif self.model_name == 'lr':
+            y_hat = loaded_model.predict(self.X_pred)
+            # np.save(f'y_lr_{self.station}.npy', y_hat, allow_pickle=False, fix_imports=False)
+            from sklearn.metrics import accuracy_score, confusion_matrix
+            confusion_matrix = confusion_matrix(self.y_pred, loaded_model.predict(self.X_pred))
+            print(confusion_matrix)
 
 if __name__ == '__main__':
     
     # Create an instance of the class
-    model = Model(station=901, window_size=16, stride=1, search=False)
+    model = Model(model_name='rf', station=901, window_size=16, stride=1, search=False)
     
     # Preprocess the data (normalizing and smoothing)
     model.preprocessor()
@@ -314,4 +502,3 @@ if __name__ == '__main__':
     
     # Predict
     model.predictor()
-    
