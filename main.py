@@ -80,6 +80,7 @@ class Model():
             # smoothed_data.to_csv(f'clean_data/labeled_{self.station}_smo.csv', encoding='utf-8', sep=',', index=False)
         else:
             self.smoothed_data = smoothed_data
+            # np.save(f'X.npy', smoothed_data, allow_pickle=True, fix_imports=True)
             # smoothed_data.to_csv(f'data/labeled_{self.station}_smo.csv', encoding='utf-8', sep=',', index=False)
 
     @tictoc
