@@ -209,8 +209,8 @@ class Model():
         shuffled_X, shuffled_y = combined[:, :-1], combined[:, -1]
         
         # Split the shuffled data into the training and testing set
-        X_train, y_train = shuffled_X[:int(len(shuffled_X) * 0.9)], shuffled_y[:int(len(shuffled_X) * 0.9)]
-        X_test, y_test = shuffled_X[int(len(shuffled_X) * 0.9):], shuffled_y[int(len(shuffled_X) * 0.9):]
+        X_train, y_train = shuffled_X[:int(len(shuffled_X) * 0.95)], shuffled_y[:int(len(shuffled_X) * 0.95)]
+        X_test, y_test = shuffled_X[int(len(shuffled_X) * 0.95):], shuffled_y[int(len(shuffled_X) * 0.95):]
         
         return X_train, y_train, X_test, y_test
     
@@ -251,7 +251,7 @@ class Model():
             
             # Call the model
             from sklearn.ensemble import RandomForestClassifier
-            model = RandomForestClassifier(random_state=0)
+            model = RandomForestClassifier(random_state=23)
 
             # Fit the model to the training data
             model.fit(X_train, y_train)
@@ -366,7 +366,6 @@ class Model():
             y_hat = model.predict(X_test)
             y_hat = np.where(y_hat == -1, 1, 0)
             confusion_matrix = confusion_matrix(y_test, y_hat)
-            print(confusion_matrix)
             tn, fp, fn, tp = confusion_matrix.ravel()
         
         print(confusion_matrix)
@@ -488,6 +487,10 @@ class Model():
             from sklearn.metrics import accuracy_score, confusion_matrix
             confusion_matrix = confusion_matrix(self.y_pred, loaded_model.predict(self.X_pred))
             print(confusion_matrix)
+        
+        # Save results to numpy
+        np.save(f'y_{self.model_name}.npy', y_hat, allow_pickle=False, fix_imports=False)
+        # np.save(f'y_gt_ml.npy', self.y_pred, allow_pickle=False, fix_imports=False)
 
 if __name__ == '__main__':
     
