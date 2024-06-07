@@ -80,7 +80,6 @@ class Model():
             # smoothed_data.to_csv(f'clean_data/labeled_{self.station}_smo.csv', encoding='utf-8', sep=',', index=False)
         else:
             self.smoothed_data = smoothed_data
-            # np.save(f'X.npy', smoothed_data, allow_pickle=True, fix_imports=True)
             # smoothed_data.to_csv(f'data/labeled_{self.station}_smo.csv', encoding='utf-8', sep=',', index=False)
 
     @tictoc
@@ -510,11 +509,11 @@ if __name__ == '__main__':
     # Build the windows for predictions
     model.windower_prediction()
     
-    # Shuffle and split the data in train and test sets
-    X_train, y_train, X_test, y_test = model.splitter()
+    # # Shuffle and split the data in train and test sets
+    # X_train, y_train, X_test, y_test = model.splitter()
 
-    # Train and test the model
-    num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
+    # # Train and test the model
+    # num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
     
-    # Predict
-    model.predictor()
+    # # Predict
+    # model.predictor()
