@@ -489,7 +489,7 @@ class Model():
             print(confusion_matrix)
         
         # Save results to numpy
-        np.save(f'y_{self.model_name}.npy', y_hat, allow_pickle=False, fix_imports=False)
+        # np.save(f'y_{self.model_name}.npy', y_hat, allow_pickle=False, fix_imports=False)
         # np.save(f'y_gt_ml.npy', self.y_pred, allow_pickle=False, fix_imports=False)
 
 if __name__ == '__main__':
@@ -509,11 +509,11 @@ if __name__ == '__main__':
     # Build the windows for predictions
     model.windower_prediction()
     
-    # # Shuffle and split the data in train and test sets
-    # X_train, y_train, X_test, y_test = model.splitter()
+    # Shuffle and split the data in train and test sets
+    X_train, y_train, X_test, y_test = model.splitter()
 
-    # # Train and test the model
-    # num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
+    # Train and test the model
+    num_anomalies, tn, fp, fn, tp = model.rf(X_train, y_train, X_test, y_test)
     
-    # # Predict
-    # model.predictor()
+    # Predict
+    model.predictor()
