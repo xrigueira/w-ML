@@ -37,7 +37,7 @@ if __name__ == '__main__':
     
     for station in stations:
         
-        # Join the filed databases
+        # Join the filled databases
         joiner(station=station)
         logging.info(f'joiner() {station} DONE')
 
